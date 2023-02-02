@@ -28,7 +28,7 @@ Public key (asymmetric-key) cryptography is used to uniquely identify users in t
 
 ### Zombie DNA
  it's a 16-digit integer, like:
-```sh
+```js
 8356281049284737
 ```
 ## Chapter 2
@@ -37,12 +37,12 @@ Declaration of the version of the Solidity compiler and this will be the startin
 
 Want to be able to compile smart contracts with any compiler version in the range of 0.5.0 (inclusive) to 0.6.0 (exclusive). It looks like this: 
 
-```sh
+```js
 pragma solidity >=0.5.0 <0.6.0;
 ```
 ### Contracts
 Solidity's code is encapsulated in contracts. All variables and functions belong to a contract.
-```sh
+```js
 pragma solidity >=0.5.0 <0.6.0;
 contract ZombieFactory {
 }
@@ -56,7 +56,7 @@ contract ZombieFactory {
 
 ### State Variables
 State variables are permanently stored in contract storage. This means it written to the Ethereum blockchain.
-```sh
+```js
 pragma solidity >=0.5.0 <0.6.0;
 
 contract ZombieFactory {
@@ -72,7 +72,7 @@ contract ZombieFactory {
 - Modulus / remainder: `x % y`
 - exponential operator: `x ** y`
 
-```sh
+```js
 pragma solidity >=0.5.0 <0.6.0;
 
 contract ZombieFactory {
@@ -83,7 +83,7 @@ contract ZombieFactory {
 ## Chapter 5
 ### Structs
 Structs allows to create more complicated data types that have multiple properties.
-```sh
+```js
 pragma solidity >=0.5.0 <0.6.0;
 
 contract ZombieFactory {

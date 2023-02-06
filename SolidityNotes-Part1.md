@@ -219,11 +219,116 @@ Function Modifiers are used to modify the behaviour of a function.
     }
 ```
 This function doesn't even read from the state of the app — its return value depends only on its function parameters. So in this case we would declare the function as **pure**.
+## Chapter 9
+### Cryptographic Hash Functions
+A cryptographic hash function is an algorithm that takes an any amount of data as input and produces the enciphered text of fixed size.The input can be a variable length string or number, but the result will always be a fixed **bytes32** data type. This consists of 64 characters (letters and numbers) that can be expressed as hexadecimal numbers.Even a slight change in the input gives a completely different output.
 
+- **keccak256(bytes memory) returns (bytes32)** - Computes the Keccak-256 hash of the input
+- **sha256(bytes memory) returns (bytes32)** - Computes the SHA-256 hash of the input
+- **ripemd160(bytes memory) returns (bytes20)** - Compute RIPEMD-160 hash of the input
+- **sha256(bytes memory) returns (bytes32)** -	Computes the SHA-256 hash of the input
+- **ecrecover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) returns (address)** -    
+Recover the address associated with the public key from.
+Elliptic curve signature used for cryptography or return Zero if an error occurs. 
+The parameters correspond to ECDSA Signature values.
 
+keccak256 expects a single parameter of type bytes. This means that we have to **"pack"** any parameters before calling keccak256:
 
+Example:
+```js
+    //6e91ec6b618bb462a4a6ee5aa2cb0e9cf30f7a052bb467b0ba58b8748c00d2e5
+    keccak256(abi.encodePacked("aaaab"));
+    //b1f078126895a1424524de5321b339ab00408010b7cf0e6ed451514981e58aa9
+    keccak256(abi.encodePacked("aaaac"));
+```
 
+The returned values are totally different despite **only a 1 character** change in the input.
+Hashing is an important aspect of cryptographic security for digital wallets and transactions on the blockchain. The Ethereum protocol uses keccak256 in its network with a consensus engine called **Ethash**. It plays an important role in producing blocks, and securing them on the blockchain.
+#### ABI (Application Binary Interface)
+An **ABI** (Application Binary Interface) interface between two software modules, most commonly between user programs and operating systems. Solidity is a high-level programming language based on this and is used exclusively by developers to create understandable smart contracts. Solidity has a global variable called **abi** that has an encode method, so we can use it to encode the parameters of any function.
 
+The keyword **abi.encodePacked** is used with statements for encoding data input. It is used with the following conditions:
+- Types shorter than **32 bytes** are concatenated directly, without **padding** or **sign extension**
+- Dynamic types are encoded in-place and without the length
+- Array elements are padded, but still encoded in-place
 
+```js
+    abi.encodePacked( <data input> )
+```
 
+This means that dynamic types are encoded in-place without length while static types will not be padded if they are shorter than 32 bytes.
 
+Encoding was meant to give the programmer more control of how the data should be encoded. Before it was the compiler that performed this function, but it can be problematic. The reason is that it can cause what are called **collisions**. The **abi.encode** function can be useful when it comes to preventing collisions in hash functions. A collision can occur when two different inputs produce the same output. That may sound impossible, but it can happen in the least expected manner. 
+Take for **example** the following inputs:
+```js
+    (AAA, BBB) -> AAABBB         
+    (AA, ABBB) -> AAABBB
+```
+They are supposed to be different from each other, but when concatenated as a single string, they actually will produce the same output. It is recommended to use **abi.encode** instead of **abi.encodePacked**. 
+
+### Typecasting
+Solidity is a statically typed language, so all variables have a fixed type. it is not possible to change the type of the variable after its declaration. This is necessary because state variables have a dedicated space for them in storage.
+
+It is possible, however, to convert one type to another. This is called type casting. There are two ways to do this: 
+- Explicit conversions
+- Implicit conversions
+
+#### Implicit Conversions
+Implicit conversions occur when the expression makes logical sense and there is no loss of information when casting. 
+```js
+    uint8 valor1 = 140;
+    uint16 valor2 = 480;
+    uint16 valor3 = valor1 + valor2; // 620
+```
+The variables **value1** and **value2** be of different types, the sum will be carried out without problem. There is no loss of information.
+#### Explicit conversions
+Sometimes you need to convert between data types explicitly.
+**Example:**
+```js
+        uint8 a = 5;
+        uint b = 6;
+        // throws an error because a * b returns a uint, not uint8:
+        uint8 c = a * b;
+        // we have to typecast b as a uint8 to make it work:
+        uint8 c = a * uint8(b);
+```
+In the above, **a * b** returns a **uint**, but we were trying to store it as a **uint8**, which could cause potential problems. By casting it as a **uint8**, it works and the compiler won't throw an error.
+#### Unicode
+Unicode is a standard for representing symbols like **text** and **emojis**. Each symbol requires between 1 and 4 bytes to be represented. Common letters use only 1 byte, while emojis use 4 bytes.
+**Example**
+converts 2 common letters, a whitespace and an emoji to the type bytes.
+```js
+        function showUnicode() public pure returns(bytes memory){
+            String memory text =unicode"Hi 😀";
+            returns bytes(text);
+        }
+```
+the output will be,
+```js
+        0x486920f09f9880
+```
+
+It is a 14-digit hexadecimal number, which means 7 bytes: 2 bytes for the common letters, 1 byte for the blank space and 4 bytes for the emoji.
+## Chapter 10
+### Events
+Solidity Event is an inheritable member of the contract, which stores the arguments passed in the transaction logs when emitted. Generally, events are used to inform the calling application about the current state of the contract, with the help of the logging facility of EVM. Events notify the applications about the change made to the contracts and applications which can be used to execute the dependent logic.
+
+**Events** are a way for your contract to communicate that something happened on the blockchain to your app front-end, which can be 'listening' for certain events and take action when they happen.
+**Example:**
+```js
+// declare the event
+event IntegersAdded(uint x, uint y, uint result);
+
+function add(uint _x, uint _y) public returns (uint) {
+  uint result = _x + _y;
+  // fire an event to let the app know the function was called:
+  emit IntegersAdded(_x, _y, result);
+  return result;
+  }
+```
+app front-end could then listen for the event. A JavaScript implementation would look something like:
+```js
+YourContract.IntegersAdded(function(error, result) {
+  // do something with result
+})
+```

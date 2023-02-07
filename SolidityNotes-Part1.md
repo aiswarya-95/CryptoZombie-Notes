@@ -332,3 +332,31 @@ YourContract.IntegersAdded(function(error, result) {
   // do something with result
 })
 ```
+## Chapter 11
+#### Web3
+A software program called a web service enables **computer-to-computer** communication over the internet. However, web services are nothing new and typically take the form of an **application programming interface (API)**. The Web is a collection of related hypertext materials that may be accessed online. For example, a user examines web pages that may contain multimedia using a web browser and uses hyperlinks to move between them.
+
+Web3 browsers help users interact with **decentralized applications** (Dapp) built on **blockchain technology**. Web3 technologies like distributed ledgers, artificial intelligence, Metaverse and others aim to create the next-generation internet, which is accessible to everyone and offers benefits.
+
+Key features of a Web3 browser include:
+
+- Immutable ecosystem, i.e., trust that people will download the digital product just as the original creator intended.
+- Enhanced transparency and security,
+- Quicker browsing performance,
+- Complete user anonymity and confidentiality,
+- Integrating cryptocurrency wallets with multiple blockchains,
+- Complete control over the content due to decentralization.
+
+
+#### Web3.js
+web3.js is a collection of **libraries** which allow you to interact with a local or remote ethereum node, using a **HTTP**, **WebSocket** or **IPC** connection. The web3 JavaScript library interacts with the Ethereum blockchain. Using this library, you can develop websites or clients that interact with the blockchain. It can retrieve user accounts, send transactions, interact with smart contracts, and more.
+#### Web3.js API Type
+
+- **eth**: Etherum blockchain related methods
+- **net**: Node’s network status
+- **personal**: Account functions and sending
+- **db**: Get/put for local LevelDB
+- **shh**: P2P messaging using Whisper
+
+
+

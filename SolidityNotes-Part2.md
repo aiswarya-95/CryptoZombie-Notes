@@ -249,3 +249,193 @@ import "../token.sol" as token; // source unit name: /project/token.sol
 ```
 
 **Note** - Relative imports always start with `./ or ../` so import `"util.sol"`, unlike import `"./util.sol"`, is a direct import. While both paths would be considered relative in the host filesystem, `util.sol` is actually absolute in the `VFS`.
+
+## Chapter 6
+### Data location
+
+Each variable declared and used in a contract has a data location. It specifies where the value of that variable should be stored. Every transaction on Ethereum Virtual Machine costs us some amount of Gas. The lower the Gas consumption the better is your Solidity code. The Gas consumption of Memory is not very significant as compared to the gas consumption of Storage. Therefore, it is always better to use Memory for intermediate calculations and store the final result in Storage.
+1.  State variables and Local Variables of structs, array are always stored in storage by default.
+2.  Function arguments are in memory.
+3. Whenever a new instance of an array is created using the keyword ‘memory’, a new copy of that variable is created. Changing the array value of the new instance does not affect the original array.
+
+Solidity provides four types of data locations.
+
+- Storage
+- Memory
+- Calldata
+
+   
+### Storage
+The storage location is permanent data, which means that this data can be accessed into all functions within the contract. It as the hard disk data of your computer where all the data gets stored permanently. Similarly, the storage variable is stored in the state of a smart contract and is persistent between function calls. It holds data persistently and consumes more gas.
+#### Example
+```js
+contract CodiesAlert {
+    string twitterAccount = "Anni_Maan";
+
+    function displayAccount() public view returns(string memory) {
+        string storage Newvar;
+        return twitterAccount;
+    }
+}
+```
+### Memory
+
+The memory location is temporary data and cheaper than the storage location.Memory is reserved for variables that are defined within the scope of a function. It can only be accessible within the function. Usually, Memory data is used to save temporary variables for calculation during function execution. Once the function gets executed, its contents are discarded. You can think of it as a RAM of each individual function, you will have access to unsaved data as long as the laptop is running but once you shut down your laptop your data is cleared from RAM if it is not saved.
+#### Example
+```js
+contract CodiesAlert {
+    string twitterAccount = "Anni_Maan";
+
+    function displayAccount(string memory _accountName) public pure returns(string memory) {
+        return _accountName;
+    }
+```
+### Calldata
+
+Calldata is non-modifiable and non-persistent data location where all the passing values to the function are stored. Also, Calldata is the default location of parameters (not return parameters) of external functions.
+
+The main difference is calldata storage is non-modifiable storage which means once function parameters are passed you cannot modify them inside the function.The second big difference is it is cheaper than memory and is mostly used with external function types. Mostly you would see calldata used with external functions.
+#### Example
+```js
+contract CodiesAlert {
+    string name = "Anni";
+
+    // Access externally Marked function inside the contract
+    function accessExternal() public view returns(string memory) {
+        // this keyword is used to access externally marked function inside the contract
+        return this.result(name);
+    }
+
+    // Below function can be access externally as well as internally
+    function result(string calldata _a) external pure returns(string calldata) {
+        return _a;
+    }
+}
+```
+There are some rules available in datalocation:
+- **State variables are always stored in the storage.**
+    ```js
+            contract DataLocation {
+                //storage
+            uint stateVariable;
+            uint[] stateArray;
+            }
+    ```
+- **Also, you can not explicitly override the location of state variables.**
+    ```js
+            contract DataLocation{
+                 uint storage stateVariable; // error  
+                 uint[] memory stateArray; // error  
+            }
+    ```
+- **Function parameters including return parameters are stored in the memory.**
+    ```js
+        contract Datalocation{
+        uint stateVariable;
+        uint[] stateArray;
+        function calc(uint num1. uint num2) public pure returns(uint result){
+            return num1+num2;
+        }
+        }
+    ```
+- **Local variables with a value type are stored in the memory. However, for a reference type, you need to specify the data location explicitly.Also Local variables with value types cannot be overriden explicitly.**
+    ```js
+    contract Locations {
+        function doSomething() public  {
+        /* these all are local variables  */
+        //value types  
+        //so they are stored in the memory  
+            bool flag2;  
+            uint number2;  
+            address account2;
+        
+        //reference type  
+            uint[] memory localArray;        
+        }
+    }   
+    ```
+-   **Function parameters (not including returns parameters) of external function are stored in the Calldata.**
+-   **Assignment of one state variable to another state variable creates a new copy.**
+-   **Assignment to storage state variable from a memory variable always creates a new copy.**
+
+    ```js
+    contract Locations {  
+        uint public stateVar1 = 10;  
+        uint stateVar2 = 20;  
+        
+        function doSomething() public returns (uint) {  
+        stateVar1 = stateVar2;  
+        stateVar2 = 30;  
+        return stateVar1; //returns 20
+        }
+    }
+    ```
+-   **Assignment to a memory variable from state storage variable will create a copy.**
+    ```js
+        contract Locations {
+            uint stateVar = 10; //storage
+            function doSomething() public returns(uint) {
+                uint localVar = 20; //memory    
+                localVar = stateVar;  
+                stateVar = 40;  
+        return localVar; //returns 10    
+             }     
+        } 
+    ```
+## Chapter 7
+#### Function visibility
+In Solidity, you can control who has access to the functions and state variables in your contract and how they interact with them. This concept is known as visibility. It is also used to ensure that when functions are specified, their level of accessibility, including 
+-   public
+-   external
+-   internal
+-   private
+
+**If the visibility modifier of a function is not explicitly declared in the code, the function is set to `public` visibility by `default`**.If a developer doesn’t use the right function visibility type, or if no visibility model is specified in their code, the contract's default public visibility is exposed to potentially exploitable security vulnerabilities. Apart from the security implications of not having function visibility specified, smart contracts might not work as intended since the functions will be working without proper instructions.
+
+The relationship between function **visibility** modifiers and **inheritance** is explained below:
+
+- If the modifier of the ParentContract function is `public`, a ChildContract can access it.
+- If the modifier of the ParentContract function is `internal`, the ChildContract can access it.
+- If the modifier of the ParentContract function is `private`, the inheriting ChildContract cannot access it.
+- If the modifier of the ParentContract function is `external`, the inheriting ChildContract cannot access it.
+
+#### 1. **Public**
+
+A public function can be accessed by any of the three types of calling contracts: `main contract, derived contract, and a third party contract`. A function is public by default.
+```js
+contract RandomContract {
+      function functionPublic() public {
+            //performs a task
+              }
+}
+```
+As shown in the code sample above, any contract in the codebase can access the “functionPublic” function because of the` “public”` visibility.
+#### 2. **External**
+
+**An external function is a function that can only be called by a `third party`.** With the external function visibility, a contract that can call the function must be independent of the main contract and can not be a derived contract.
+```js
+contract RandomContract {
+      function externalFunction() external {
+            //performs a task
+      }
+}
+```
+Above is a random contract (RandomContract) that is performing some task. The code snippet below is an external contract that is calling the external function on the RandomContract.
+```js
+interface IRandomContract {
+	function externalFunction() external;
+}
+contract CallingContract {
+        	function functionIsExternalCall(address addr) external {
+	IRandomContract(addr).externalFunction();
+          }
+}
+```
+#### 3. **Internal**
+
+**An internal function can be called by the main contract and any of its derived contracts**. Internal functions are accessible from the main contract in which they were initially declared and by the contracts that extend from this main contract through inheritance. 
+#### 4. **Private**
+
+**A private function can only be called by the main contract in which it was specified.** Private functions are used initially according to common practice, but if the scope is wider than this modifier type, any other plausible modifier should be used.
+
+

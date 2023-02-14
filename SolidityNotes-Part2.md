@@ -384,7 +384,7 @@ There are some rules available in datalocation:
     ```
 ## Chapter 7
 #### Function visibility
-In Solidity, you can control who has access to the functions and state variables in your contract and how they interact with them. This concept is known as visibility. It is also used to ensure that when functions are specified, their level of accessibility, including 
+In Solidity, you can control who has access to the functions and state variables in your contract and how they interact with them. This concept is known as **visibility**. It is also used to ensure that when functions are specified, their level of accessibility, including 
 -   public
 -   external
 -   internal
@@ -438,4 +438,133 @@ contract CallingContract {
 
 **A private function can only be called by the main contract in which it was specified.** Private functions are used initially according to common practice, but if the scope is wider than this modifier type, any other plausible modifier should be used.
 
+## Chapter 8
+### Interface
+**A Solidity contract interface is a list of function definitions without implementation**. Interfaces are the same as abstract contracts created by using an `interface` keyword, also known as a **pure abstract contract**. Interfaces do not have any definition or any state variables, constructors, or any function with implementation, they only contain function declarations. Functions of Interface can be only of type **external**. They can inherit from other interfaces, but they can’t inherit from other contracts. An interface can have enum, structs which can be accessed using interface name dot notation.
 
+#### Interacting with other contracts
+
+For our contract to talk to another contract on the blockchain that we don't own, first we need to define an `interface`.
+
+Let's look at a simple **example**.
+```js
+contract LuckyNumber {
+  mapping(address => uint) numbers;
+
+  function setNum(uint _num) public {
+    numbers[msg.sender] = _num;
+  }
+
+  function getNum(address _myAddress) public view returns (uint) {
+    return numbers[_myAddress];
+  }
+}
+```
+This would be a simple contract where anyone could store their **lucky number**, and it will be associated with their Ethereum address. Then anyone else could look up that person's lucky number using their address.
+
+Now let's say we had an external contract that wanted to read the data in this contract using the **getNum** function.
+
+First we'd have to define an interface of the LuckyNumber contract:
+```js
+contract NumberInterface {
+  function getNum(address _myAddress) public view returns (uint);
+}
+```
+Notice that this looks like defining a contract, with a few differences. For one, we're only declaring the functions we want to interact with — in this case **getNum** — and we don't mention any of the other functions or state variables.
+
+Secondly, we're not defining the function bodies. Instead of curly braces ({ and }), we're simply ending the function declaration with a **semi-colon (;)**. So it kind of looks like a contract skeleton. This is how the compiler knows it's an interface.
+
+By including this interface in our dapp's code our contract knows what the other contract's functions look like, how to call them, and what sort of response to expect.
+We can use it in a contract as follows:
+```js
+contract MyContract {
+  address NumberInterfaceAddress = 0xab38...
+  // ^ The address of the FavoriteNumber contract on Ethereum
+  NumberInterface numberContract = NumberInterface(NumberInterfaceAddress);
+  // Now `numberContract` is pointing to the other contract
+
+  function someFunction() public {
+    // Now we can call `getNum` from that contract:
+    uint num = numberContract.getNum(msg.sender);
+    // ...and do something with `num` here
+  }
+}
+```
+### Handling Multiple Return Values
+In Solidity, from any type of function, you can return multiple values. You can do this by using the `return(value1, value2, ...)` statement or by directly assigning the value to the variable name that's used in the `returns()` statement.
+
+The following is an example of returning multiple values from a function:
+```js
+function multipleReturns() internal returns(uint a, uint b, uint c) {
+  return (1, 2, 3);
+}
+
+function processMultipleReturns() external {
+  uint a;
+  uint b;
+  uint c;
+  // This is how you do multiple assignment:
+  (a, b, c) = multipleReturns();
+}
+
+// Or if we only cared about one of the values:
+function getLastReturnValue() external {
+  uint c;
+  // We can just leave the other fields blank:
+  (,,c) = multipleReturns();
+}
+
+```
+## Chapter 9
+### Decision Making
+Decision making in programming is used when we have to adopt one out of a given set of paths for program flow. For this purpose, **conditional statements** are used which allows the program to execute the piece of code when the condition fulfills. Solidity uses control statements to control the flow of execution of the program to advance and branch-based changes to the state. Following conditional statements are provided by Solidity.
+##### 1. If statement
+
+This is the most basic conditional statement. It is used to make a decision whether the statement or block of code will be executed or not. If the condition is true the statements will be executed, else no statement will execute. 
+
+##### Syntax:
+```js
+if (condition) {
+   statement or block of code to be executed if the condition is True
+}
+```
+##### Example
+If statements in Solidity look just like JavaScript:
+```js
+function eatBLT(string memory sandwich) public {
+  // Remember with strings, we have to compare their keccak256 hashes
+  // to check equality
+  if (keccak256(abi.encodePacked(sandwich)) == keccak256(abi.encodePacked("BLT"))) {
+    eat();
+  }
+}
+```
+
+##### 2. if…else statement
+
+This statement is the next form of conditional statement which allows the program to execute in a more controlled way. Here if the condition is true then the, if block is executed while if the condition is false then else block, is executed. 
+
+##### Syntax:
+
+```js
+if (condition) {
+   statement or block of code to be executed if condition is True
+} else {
+   statement or block of code to be executed if condition is False
+}
+```
+##### 3. if…else if…else statement
+
+This is a modified form of if…else conditional statement which is used to make a decision among several options. The statements start execution from if statement and as the condition of any if block is true the block of code associated with it is executed and rest if are skipped, and if none of the condition is true then else block executes.
+
+##### Syntax:
+
+```js
+if (condition) {
+   statement or block of code to be executed if the condition is True
+} else if (condition 2) {
+   statement or block of code to be executed if the condition of else...if is True
+} else {
+   statement or block of code to be executed if none of the condition is True
+}
+```

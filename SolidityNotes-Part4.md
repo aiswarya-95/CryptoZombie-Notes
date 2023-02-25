@@ -105,3 +105,228 @@ This makes our random number function **exploitable**.
 Let's say we had a **coin flip contract** — `heads` you double your money, `tails` you lose everything. Let's say it used the above random function to determine **heads or tails**. (random >= 50 is heads, random < 50 is tails).
 
 If I were running a node, I could publish a transaction **only to my own node** and not share it. I could then run the coin flip function to see if I won — and if I lost, choose not to include that transaction in the next block I'm solving. I could keep doing this indefinitely until I finally won the coin flip and solved the next block, and profit.
+
+#### So how do we generate random numbers safely in Ethereum?
+Of course, since tens of thousands of Ethereum nodes on the network are competing to solve the next block, my odds of solving the next block are extremely low. It would take me a lot of time or computing resources to exploit this profitably — but if the reward were high enough (like if I could bet $100,000,000 on the coin flip function), it would be worth it for me to attack.
+
+So while this random number generation is NOT secure on Ethereum, in practice unless our random function has a lot of money on the line, the users of your game likely won't have enough resources to attack it.
+
+Because we're just building a simple game for demo purposes in this tutorial and there's no real money on the line, we're going to accept the tradeoffs of using a random number generator that is simple to implement, knowing that it isn't totally secure.
+
+```js
+pragma solidity >=0.5.0 <0.6.0;
+
+import "./zombiehelper.sol";
+
+contract ZombieAttack is ZombieHelper {
+  uint randNonce = 0;
+
+  function randMod(uint _modulus) internal returns(uint) {
+    randNonce++;
+    return uint(keccak256(abi.encodePacked(now, msg.sender, randNonce))) % _modulus;
+  }
+}
+```
+
+#### Zombie Fightin'
+Our zombie battles will work as follows:
+
+*   You choose one of your zombies, and choose an opponent's zombie to attack.
+*   If you're the **attacking zombie**, you will have a **70%** chance of winning. The **defending zombie** will have a **30%** chance of winning.
+*   All zombies (attacking and defending) will have a **winCount** and a **lossCount** that will increment depending on the outcome of the battle.
+*   If the attacking zombie wins, it levels up and spawns a new zombie.
+*   If it loses, nothing happens (except its **lossCount** incrementing).
+*   Whether it wins or loses, the attacking zombie's cooldown time will be triggered.
+
+## Chapter 4
+####  Refactoring Common Logic
+
+In changeName(), changeDna(), and feedAndMultiply(), we used the following check:
+```js
+        require(msg.sender == zombieToOwner[_zombieId]);
+```
+This is the same logic we'll need for our `attack` function. Since we're using the same logic multiple times, let's move this into its `own modifier` to clean up our code and avoid repeating ourselves.
+
+```js
+contract ZombieFeeding is ZombieFactory {
+
+  KittyInterface kittyContract;
+
+  // 1. Create modifier here
+  modifier ownerOf(uint _zombieId) {
+      require(msg.sender == zombieToOwner[_zombieId]);
+      _;
+  }
+   function feedAndMultiply(uint _zombieId, uint _targetDna, string memory _species) internal ownerOf(_zombieId) {
+    Zombie storage myZombie = zombies[_zombieId];
+    require(_isReady(myZombie));
+    _targetDna = _targetDna % dnaModulus;
+    uint newDna = (myZombie.dna + _targetDna) / 2;
+    if (keccak256(abi.encodePacked(_species)) == keccak256(abi.encodePacked("kitty"))) {
+      newDna = newDna - newDna % 100 + 99;
+    }
+}
+```
+
+We have a couple more places in `zombiehelper.sol` where we need to implement our new modifier ownerOf.
+
+```js
+pragma solidity >=0.5.0 <0.6.0;
+import "./zombiefeeding.sol";
+contract ZombieHelper is ZombieFeeding {
+
+  uint levelUpFee = 0.001 ether;
+
+  modifier aboveLevel(uint _level, uint _zombieId) {
+    require(zombies[_zombieId].level >= _level);
+    _;
+  }
+  // 1. Modify this function to use `ownerOf`:
+  function changeName(uint _zombieId, string calldata _newName) external aboveLevel(2, _zombieId) ownerOf(_zombieId) {
+    // require(msg.sender == zombieToOwner[_zombieId]); // remove this line
+    zombies[_zombieId].name = _newName;
+  }
+
+  // 2. Do the same with this function:
+  function changeDna(uint _zombieId, uint _newDna) external aboveLevel(20, _zombieId) ownerOf(_zombieId) {
+    // require(msg.sender == zombieToOwner[_zombieId]); // remove this line    
+    zombies[_zombieId].dna = _newDna;
+  }
+ }
+ ```
+
+We're going to continue defining our `attack` function, now that we have the ownerOf modifier to use.
+The first thing our function should do is get a storage pointer to both zombies so we can more easily interact with them:
+*    Declare a Zombie storage named myZombie, and set it equal to zombies[_zombieId].
+*    Declare a Zombie storage named enemyZombie, and set it equal to zombies[_targetId].
+
+```js
+pragma solidity >=0.5.0 <0.6.0;
+import "./zombiehelper.sol";
+contract ZombieAttack is ZombieHelper {
+  uint randNonce = 0;
+  uint attackVictoryProbability = 70;
+
+  function randMod(uint _modulus) internal returns(uint) {
+    randNonce++;
+    return uint(keccak256(abi.encodePacked(now, msg.sender, randNonce))) % _modulus;
+
+  }
+
+  // 1. Add modifier here
+  function attack(uint _zombieId, uint _targetId) external ownerOf(_zombieId) {
+    // 2. Start function definition here
+    Zombie storage myZombie = Zombies[_zombieId];
+    Zombie storage enemyZombie = Zombies[_targetId];
+    uint rand = randMod(100);
+  }
+}
+```
+
+## Chapter 5
+#### Zombie Wins and Losses
+
+For our zombie game, we're going to want to keep track of how many battles our zombies have **won and lost**. That way we can maintain a **"zombie leaderboard"** in our game state.
+
+We could store this data in a number of ways in our DApp — as individual **mappings, as leaderboard Struct, or in the Zombie struct** itself.
+
+Each has its own benefits and tradeoffs depending on how we intend on interacting with the data. In this tutorial, we're going to store the stats on our **Zombie struct** for simplicity, and call them **winCount and lossCount**.
+
+So let's jump back to `zombiefactory.sol`, and add these properties to our **Zombie struct**.
+
+Modify our `Zombie struct` to have 2 more properties:
+*   **winCount**, a `uint16`
+*   **lossCount**, also a `uint16`
+```js
+pragma solidity >=0.5.0 <0.6.0;
+import "./ownable.sol";
+contract ZombieFactory is Ownable {
+
+    event NewZombie(uint zombieId, string name, uint dna);
+    uint dnaDigits = 16;
+    uint dnaModulus = 10 ** dnaDigits;
+    uint cooldownTime = 1 days;
+
+    struct Zombie {
+      string name;
+      uint dna;
+      uint32 level;
+      uint32 readyTime;
+      // 1. Add new properties here
+      uint16 winCount;
+      uint16 lossCount;
+    }
+    function _createZombie(string memory _name, uint _dna) internal {
+        // 2. Modify new zombie creation here:
+        uint id = zombies.push(Zombie(_name, _dna, 1, uint32(now + cooldownTime), 0, 0)) - 1;
+        zombieToOwner[id] = msg.sender;
+        ownerZombieCount[msg.sender]++;
+        emit NewZombie(id, _name, _dna);
+    }
+}
+```
+## Chapter 6
+#### Zombie Victory 
+Now that we have a **winCount** and **lossCount**, we can update them depending on which zombie wins the fight.
+
+Create an if statement that checks **if rand is less than or equal to attackVictoryProbability**.
+```js
+pragma solidity >=0.5.0 <0.6.0;
+import "./zombiehelper.sol";
+contract ZombieAttack is ZombieHelper {
+  uint randNonce = 0;
+  uint attackVictoryProbability = 70;
+
+  function randMod(uint _modulus) internal returns(uint) {
+    randNonce++;
+    return uint(keccak256(abi.encodePacked(now, msg.sender, randNonce))) % _modulus;
+  }
+
+  function attack(uint _zombieId, uint _targetId) external ownerOf(_zombieId) {
+    Zombie storage myZombie = zombies[_zombieId];
+    Zombie storage enemyZombie = zombies[_targetId];
+    uint rand = randMod(100);
+    if (rand <= attackVictoryProbability) {
+      myZombie.winCount++;
+      myZombie.level++;
+      enemyZombie.lossCount++;
+      feedAndMultiply(_zombieId, enemyZombie.dna, "zombie");
+    } 
+  }
+}
+```
+## Chapter 7
+#### Zombie Loss 
+In our game, when zombies lose, they don't level down — they simply **add a loss to their lossCount**, and their cooldown is triggered so they have to wait a day before attacking again.
+
+To implement this logic, we'll need an `else` statement.
+`else` statements are written just like in **JavaScript** and many other languages:
+```js
+if (zombieCoins[msg.sender] > 100000000) {
+  // You rich!!!
+} else {
+  // We require more ZombieCoins...
+}
+```
+
+Add an `else` statement. If our zombie loses:
+*   Increment **myZombie's lossCount**.
+*   Increment **enemyZombie's winCount**.
+*   Run the **_triggerCooldown** function on myZombie. This way the zombie can only attack once per day. (Remember, _triggerCooldown is already run inside **feedAndMultiply**. So the zombie's cooldown will be triggered whether he wins or loses.)
+```js
+function attack(uint _zombieId, uint _targetId) external ownerOf(_zombieId) {
+    Zombie storage myZombie = zombies[_zombieId];
+    Zombie storage enemyZombie = zombies[_targetId];
+    uint rand = randMod(100);
+    if (rand <= attackVictoryProbability) {
+      myZombie.winCount++;
+      myZombie.level++;
+      enemyZombie.lossCount++;
+      feedAndMultiply(_zombieId, enemyZombie.dna, "zombie");
+    } else {
+        myZombie.lossCount++;
+        enemyZombie.winCount++;
+        _triggerCooldown(myZombie);
+    }
+  }
+  ```

@@ -241,3 +241,133 @@ There is one more thing to do- there's an `Approval` event in the `ERC721 spec`.
         emit Approval(msg.sender, _approved, _tokenId);
     }
  ```
+ 
+ ### Chapter 5
+ #### Contract security enhancements: Overflows and Underflows
+
+##### What is Integer Overflow?
+
+In Solidity, there are **2** types of `integers`: 
+
+1.  `unsigned integers` (uint): These are the positive numbers ranging from **0 to ( 2 ^256^ – 1 )**. 
+2.  `signed integers` (int): This includes both positive and negative numbers ranging from ** -2 ^225^  to (2 ^255^ – 1)**.
+
+An **overflow/ underflow** occurs when an operation is performed that requires a fixed-size variable to store the result of the operation.
+##### Overflow Situation:
+
+Consider an unsigned 8-bit integer variable `uint8` a. This variable has a range from **0 to 255**:
+```js
+    uint8 a = 255;
+    a++;
+```
+This results in an overflow error as the variable a can take values in the interval **0-255** then incrementing the value of a by **1** would result in an **overflow** situation.
+
+##### Underflow Situation:
+
+Consider an **unsigned 8-bit** integer variable `uint8` a. This variable has a range from **0 to 255**:
+```js
+    uint8 a = 0;
+    a–;
+```
+This results in an underflow error as the variable a can take a value in the range of **0-255** and decrementing the value by **1** would result in code collapse.
+
+ ##### Process and Challenges of Detecting Integer Overflow in Ethereum
+
+*   **No indication**: In other programming languages there is an indication of integer overflow but this is not the case with EVM. It is possible to deduce that overflow has occurred from the values stored after the transaction. The most common way is to rerun the transaction to identify if there is an overflow condition.
+*   **Arithmetic Operations**: Addition or subtraction of 2 numbers can also result in Integer overflow/ underflow. The multiplication operation is based on addition and exponent operation is based on multiplication, so both of these operations are also prone to overflow attack. 
+*   **False positives**: In some cases, it is possible to identify what operation has caused integer overflow and whether the operands are signed or unsigned integers. Some compilers intentionally create overflow conditions to run some functionality so when there is an overflow condition it is hard to guess whether it is an actual error or an intentionally raised situation.
+*   **No types on byte code level**: The types of signed and unsigned integers are declared in high-level programming language only but not on the byte code level. So in cases where there is no Solidity source code for the smart contract then it is hard to guess the type of integers.
+
+#### Using SafeMath
+
+To prevent this, OpenZeppelin has created a `library` called **SafeMath** that prevents these issues by default.
+
+A `library` is a special type of contract in Solidity. One of the things it is useful for is to attach functions to native data types.
+
+For example, with the SafeMath library, we'll use the syntax 
+```js
+        using SafeMath for uint256
+```
+The SafeMath library has 4 functions —
+*   add, 
+*   sub,
+*   mul, 
+*   div.
+
+And now we can access these functions from `uint256` as follows:
+```js
+    using SafeMath for uint256;
+
+    uint256 a = 5;
+    uint256 b = a.add(3); // 5 + 3 = 8
+    uint256 c = a.mul(2); // 5 * 2 = 10
+```
+
+Let's take a look at the code behind SafeMath:
+```js
+library SafeMath {
+
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    if (a == 0) {
+      return 0;
+    }
+    uint256 c = a * b;
+    assert(c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+}
+```
+First we have the `library` keyword — libraries are similar to contracts but with a few differences. For our purposes, libraries allow us to use the using keyword, which automatically tacks on all of the library's methods to another data type:
+```js
+using SafeMath for uint;
+// now we can use these methods on any uint
+uint test = 2;
+test = test.mul(3); // test now equals 6
+test = test.add(5); // test now equals 11
+```
+Note that the `mul` and `add` functions each require **2 arguments**, but when we declare **using SafeMath** for `uint`, the `uint` we call the function on `(test)` is automatically passed in as the first argument.
+
+Let's look at the code behind add to see what `SafeMath` does:
+```js
+function add(uint256 a, uint256 b) internal pure returns (uint256) {
+  uint256 c = a + b;
+  assert(c >= a);
+  return c;
+}
+```
+Basically add just adds **2 uints** like `+`, but it also contains an **assert** statement to make sure the **sum is greater than a**. This protects us from overflows.
+
+**assert** is similar to require, where it will throw an error if false. The difference between **assert and require** is that `require` will refund the user the rest of their gas when a function fails, whereas `assert` will not. So most of the time you want to use `require` in your code; `assert` is typically used when something has gone horribly wrong with the code (like a uint overflow).
+
+So, simply put, **SafeMath's add, sub, mul, and div** are functions that do the basic 4 math operations, but throw an error if an overflow or underflow occurs.
+
+#####v Using SafeMath in our code.
+
+To prevent **overflows and underflows**, we can look for places in our code where we use **+, -, *, or /,** and replace them with **add, sub, mul, div**.
+
+Ex. Instead of doing:
+```js
+        myUint++;
+```
+We would do:
+```js
+        myUint = myUint.add(1);
+```

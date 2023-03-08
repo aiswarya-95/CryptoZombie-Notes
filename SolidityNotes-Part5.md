@@ -289,10 +289,10 @@ For example, with the SafeMath library, we'll use the syntax
         using SafeMath for uint256
 ```
 The SafeMath library has 4 functions —
-*   add, 
-*   sub,
-*   mul, 
-*   div.
+*   add
+*   sub
+*   mul 
+*   div
 
 And now we can access these functions from `uint256` as follows:
 ```js
@@ -359,7 +359,7 @@ Basically add just adds **2 uints** like `+`, but it also contains an **assert**
 
 So, simply put, **SafeMath's add, sub, mul, and div** are functions that do the basic 4 math operations, but throw an error if an overflow or underflow occurs.
 
-#####v Using SafeMath in our code.
+##### Using SafeMath in our code.
 
 To prevent **overflows and underflows**, we can look for places in our code where we use **+, -, *, or /,** and replace them with **add, sub, mul, div**.
 
@@ -371,3 +371,81 @@ We would do:
 ```js
         myUint = myUint.add(1);
 ```
+
+
+We should prevent overflows here as well just to be safe. (It's a good idea in general to just use SafeMath instead of the basic math operations. Maybe in a future version of Solidity these will be implemented by default, but for now we have to take extra security precautions in our code).
+
+However we have a slight problem — **winCount** and **lossCount** are `uint16s`, and level is a `uint32`. So if we use SafeMath's add method with these as arguments, it won't actually protect us from overflow since it will convert these types to `uint256`:
+```js
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+     assert(c >= a);
+    return c;
+    }
+
+    // If we call `.add` on a `uint8`, it gets converted to a `uint256`.
+    // So then it won't overflow at 2^8, since 256 is a valid `uint256`.
+```
+This means we're going to need to implement 2 more libraries to prevent overflow/underflows with our `uint16s` and `uint32s`. We can call them `SafeMath16` and   `SafeMath32`.
+
+The code will be exactly the same as `SafeMath`, except all instances of uint256 will be replaced with `uint32` or `uint16`.
+
+```js
+contract ZombieFactory is Ownable {
+
+  using SafeMath for uint256;
+  using SafeMath32 for uint32;
+  using SafeMath16 for uint16;
+  }
+  ```
+  
+  ### Chapter 6
+  #### Comments
+  ##### Syntax for comments
+
+Commenting in Solidity is just like JavaScript. You've already seen some examples of single line comments throughout the CryptoZombies lessons:
+```js
+    // This is a single-line comment. It's kind of like a note to self (or to others)
+```
+Just add double `//` anywhere and you're commenting. It's so easy that you should do it all the time.
+
+But I hear you — sometimes a single line is not enough. You are born a writer, after all!
+
+Thus we also have **multi-line** comments:
+
+```js
+contract CryptoZombies {
+  /* This is a multi-lined comment. I'd like to thank all of you
+    who have taken your time to try this programming course.
+    I know it's free to all of you, and it will stay free
+    forever, but we still put our heart and soul into making
+    this as good as it can be. */
+    }
+```
+
+In particular, it's good practice to comment your code to explain the expected behavior of every function in your contract. This way another developer (or you, after a 6 month hiatus from a project!) can quickly skim and understand at a high level what your code does without having to read the code itself.
+
+The standard in the Solidity community is to use a format called `natspec`, which looks like this:
+```js
+/// @title A contract for basic math operations
+/// @author H4XF13LD MORRIS 💯💯😎💯💯
+/// @notice For now, this contract just adds a multiply function
+contract Math {
+  /// @notice Multiplies 2 numbers together
+  /// @param x the first uint.
+  /// @param y the second uint.
+  /// @return z the product of (x * y)
+  /// @dev This function does not currently check for overflows
+  function multiply(uint x, uint y) returns (uint z) {
+    // This is just a normal comment, and won't get picked up by natspec
+    z = x * y;
+  }
+}
+```
+`@title` and `@author` are straightforward.
+
+`@notice` explains to a user what the contract / function does. `@dev` is for explaining extra details to developers.
+
+`@param` and `@return` are for describing what each parameter and return value of a function are for.
+
+Note that you don't always have to use all of these tags for every function — all tags are optional. But at the very least, leave a `@dev` note explaining what each function does.
